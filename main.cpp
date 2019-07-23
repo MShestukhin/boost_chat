@@ -16,6 +16,7 @@
 #include <string>
 #include <set>
 
+
 using boost::asio::ip::tcp;
 
 class chat_participant
@@ -32,9 +33,6 @@ public:
   void join(chat_participant_ptr participant)
   {
     participants_.insert(participant);
-    char* hello="Welcom to chat!";
-    for (auto participant: participants_)
-      participant->deliver(*hello,10);
   }
 
   void leave(chat_participant_ptr participant)
@@ -73,10 +71,7 @@ public:
   {
       int i=0;
       memset(write_data_, 0, max_length);
-      for(i; data_[i]!='\0';i++){
-          write_data_[i]=(&msg)[i];
-      }
-      write_data_[i+1]='\0';
+      memccpy(write_data_,(&msg),0,length);
       do_write(length);
   }
 
@@ -89,7 +84,8 @@ private:
         {
           if (!ec)
           {
-              room_.deliver(*data_,length);
+              std::cout<<data_<<std::endl;
+              room_.deliver(*data_,length);  //  deliver(const char * data,length   .deliver(data_,length))
               do_read();
           }
           else
@@ -128,6 +124,7 @@ public:
     : acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
       socket_(io_service)
   {
+    std::cout<<"Server run..."<<std::endl;
     do_accept();
   }
 
