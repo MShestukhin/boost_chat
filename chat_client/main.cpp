@@ -17,8 +17,7 @@ public:
   {
         socket = std::make_shared<tcp::socket>(io_service);
         socket->connect(tcp::endpoint(boost::asio::ip::address::from_string("127.0.0.1"), 1234));
-
-//        start_receive();
+        std::cout<<"Welcome to chat ! Enter your message ..."<<std::endl;
   }
 
   void start_receive()
@@ -29,8 +28,8 @@ public:
           boost::asio::placeholders::error));
   }
 
-  void write(char *msg){
-      socket->async_write_some(boost::asio::buffer(msg,std::strlen(msg)),
+  void write(std::string msg){
+      socket->async_write_some(boost::asio::buffer(msg),
           boost::bind(&tcp_client::handler_write, this,
             boost::asio::placeholders::error));
 
@@ -44,9 +43,8 @@ private:
 
   void handle_receive(const boost::system::error_code& error)
   {
-        std::cout << "handling receive: " << error << ": " << error.message() << std::endl;
+//        std::cout << "handling receive: " << error << ": " << error.message() << std::endl;
         std::cout << std::string(recv_buf.data()) << std::endl;
-
         start_receive();
   }
 
@@ -64,9 +62,9 @@ void read_thread()
 void write_thread(){
     while(1){
         std::string msg;
-        std::cin>>msg;
-        msg=username+" : "+msg+"\n";
-        client.write((char*)msg.c_str());
+        std::getline( std::cin, msg);
+        std::string res_msg=username+" : "+msg+"\n";
+        client.write(res_msg);
     }
 }
 
@@ -74,7 +72,7 @@ int main(int argc, char* argv[])
 {
     if (argc != 2)
     {
-      std::cerr << "Usage: async_tcp_echo_server <user_name>\n";
+      std::cerr << "Usage: client_chat <user_name>\n";
       return 1;
     }
     username=std::string(argv[1]);

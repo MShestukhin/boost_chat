@@ -71,7 +71,7 @@ public:
   {
       int i=0;
       memset(write_data_, 0, max_length);
-      memccpy(write_data_,(&msg),0,length);
+      memccpy(write_data_,(&msg),'\n',length);
       do_write(length);
   }
 
@@ -85,7 +85,7 @@ private:
           if (!ec)
           {
               std::cout<<data_<<std::endl;
-              room_.deliver(*data_,length);  //  deliver(const char * data,length   .deliver(data_,length))
+              room_.deliver(*data_,length);
               do_read();
           }
           else
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
   {
     if (argc != 2)
     {
-      std::cerr << "Usage: async_tcp_echo_server <port>\n";
+      std::cerr << "Usage: server_chat <port>\n";
       return 1;
     }
 
