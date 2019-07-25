@@ -1,13 +1,3 @@
-//
-// async_tcp_echo_server.cpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
-//
-// Copyright (c) 2003-2013 Christopher M. Kohlhoff (chris at kohlhoff dot com)
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
-
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -15,6 +5,9 @@
 #include <boost/asio.hpp>
 #include <string>
 #include <set>
+#include "include/TransactionData.h"
+#include "include/Block.h"
+#include "include/Blockchain.h"
 
 
 using boost::asio::ip::tcp;
@@ -42,11 +35,17 @@ public:
 
   void deliver(char &msg,std::size_t length)
   {
+    time_t data1Time;
+    std::string str_msg=std::string(&msg);
+    TransactionData data1(str_msg, time(&data1Time));
+    awesomeCoin.addBlock(data1);
+    awesomeCoin.printChain();
     for (auto participant: participants_)
       participant->deliver(msg,length);
   }
 
 private:
+  Blockchain awesomeCoin;
   std::set<chat_participant_ptr> participants_;
 };
 
@@ -84,7 +83,6 @@ private:
         {
           if (!ec)
           {
-              std::cout<<data_<<std::endl;
               room_.deliver(*data_,length);
               do_read();
           }

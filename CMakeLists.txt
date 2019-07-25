@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
 project(server_chat)
-add_executable(${PROJECT_NAME} "main.cpp")
+aux_source_directory(. SRC_LIST)
+add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
