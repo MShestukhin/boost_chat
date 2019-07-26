@@ -19,11 +19,6 @@ int Block::getIndex()
     return index;
 }
 
-/*
- Generates hash for current block
- - Includes previousHash in generation
- - ^ Very important
-*/
 size_t Block::generateHash()
 {
     // creating string of transaction data

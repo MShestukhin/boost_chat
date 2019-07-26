@@ -8,7 +8,7 @@
 #include "include/TransactionData.h"
 #include "include/Block.h"
 #include "include/Blockchain.h"
-
+#include <deque>
 
 using boost::asio::ip::tcp;
 
@@ -16,7 +16,7 @@ class chat_participant
 {
 public:
   virtual ~chat_participant() {}
-  virtual void deliver(char& msg,std::size_t length) = 0;
+  virtual void deliver(std::string msg,std::size_t length) = 0;
 };
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 
@@ -33,11 +33,11 @@ public:
     participants_.erase(participant);
   }
 
-  void deliver(char &msg,std::size_t length)
+  void deliver(std::string msg,std::size_t length)
   {
     time_t data1Time;
-    std::string str_msg=std::string(&msg);
-    TransactionData data1(str_msg, time(&data1Time));
+//    std::string str_msg=std::string(&msg);
+    TransactionData data1(msg, time(&data1Time));
     awesomeCoin.addBlock(data1);
     awesomeCoin.printChain();
     for (auto participant: participants_)
@@ -58,6 +58,7 @@ public:
     : socket_(std::move(socket)),
       room_(room)
   {
+      str_data=new std::string;
   }
 
   void start()
@@ -66,37 +67,54 @@ public:
     do_read();
   }
 
-  void deliver(char& msg,std::size_t length)
+  void deliver(std::string msg,std::size_t length)
   {
       int i=0;
-      memset(write_data_, 0, max_length);
-      memccpy(write_data_,(&msg),'\n',length);
-      do_write(length);
+      delete str_data;
+      str_data=new std::string;
+      *str_data=msg;
+      do_write(str_data->size());
   }
 
 private:
   void do_read()
   {
     auto self(shared_from_this());
-    socket_.async_read_some(boost::asio::buffer(data_, max_length),
-        [this, self](boost::system::error_code ec, std::size_t length)
-        {
-          if (!ec)
-          {
-              room_.deliver(*data_,length);
-              do_read();
-          }
-          else
-          {
-            room_.leave(shared_from_this());
-          }
-        });
+    boost::asio::async_read_until(socket_,in_pac,'\r\n',[this, self](boost::system::error_code ec, std::size_t length)
+    {
+      if (!ec)
+      {
+          std::istream is(&in_pac);
+          std::string msg;
+          std::getline(is, msg);
+          room_.deliver(msg,length);
+          do_read();
+      }
+      else
+      {
+        room_.leave(shared_from_this());
+      }
+    });
+//    socket_.async_read_some(boost::asio::buffer(data_, max_length),
+//        [this, self](boost::system::error_code ec, std::size_t length)
+//        {
+//          if (!ec)
+//          {
+//              room_.deliver(*data_,length);
+//              std::cout<<"Bytes available "<<length<<std::endl;
+//              do_read();
+//          }
+//          else
+//          {
+//            room_.leave(shared_from_this());
+//          }
+//        });
   }
 
   void do_write(std::size_t length)
   {
     auto self(shared_from_this());
-    boost::asio::async_write(socket_, boost::asio::buffer(write_data_, length),
+    boost::asio::async_write(socket_, boost::asio::buffer(*str_data),
         [this, self](boost::system::error_code ec, std::size_t length)
         {
           if (!ec)
@@ -109,10 +127,12 @@ private:
   }
 
   tcp::socket socket_;
-  enum { max_length = 1024 };
+  enum { max_length = 10 };
   char data_[max_length];
   char write_data_[max_length];
+  std::string* str_data;
   chat_room& room_;
+  boost::asio::streambuf in_pac;
 };
 
 class server

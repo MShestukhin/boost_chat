@@ -22,7 +22,7 @@ public:
 
   void start_receive()
   {
-
+    memset(recv_buf.data(),0,1024);
     socket->async_receive(boost::asio::buffer(recv_buf),
         boost::bind(&tcp_client::handle_receive, this,
           boost::asio::placeholders::error));
