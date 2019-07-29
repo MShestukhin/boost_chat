@@ -63,7 +63,7 @@ void write_thread(){
     while(1){
         std::string msg;
         std::getline( std::cin, msg);
-        std::string res_msg=username+" : "+msg+"\n";
+        std::string res_msg=username+" : "+msg+"\r\n";
         client.write(res_msg);
     }
 }

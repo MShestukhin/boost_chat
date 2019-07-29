@@ -7,34 +7,26 @@
 
 #include <vector>
 
-// Blockchain Constructor
 Blockchain::Blockchain()
 {
     Block genesis = createGenesisBlock();
     chain.push_back(genesis);
 }
 
-// Public Chain Getter
 std::vector<Block> Blockchain::getChain() {
     return chain;
 }
 
-// Create Genesis Block
 Block Blockchain::createGenesisBlock()
 {
-    // Get Current Time
     std::time_t current;
     
-    // Setup Initial Transaction Data
     TransactionData d("Genesis", time(&current));
     
-    // Return Genesis Block
     Block genesis(0, d, 0);
     return genesis;
 }
 
-// We only need pointer here
-// to demonstrate manipulation of transaction data
 Block *Blockchain::getLatestBlock()
 {
     return &chain.back();
@@ -60,7 +52,6 @@ bool Blockchain::isChainValid()
             return false;
         }
         
-        // Don't forget to check if this is the first item
         if (it != chain.begin())
         {
             Block previousBlock = *(it - 1);

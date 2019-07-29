@@ -35,10 +35,9 @@ public:
 
   void deliver(std::string msg,std::size_t length)
   {
-    time_t data1Time;
-//    std::string str_msg=std::string(&msg);
-    TransactionData data1(msg, time(&data1Time));
-    awesomeCoin.addBlock(data1);
+    time_t dataTime;
+    TransactionData data(msg, time(&dataTime));
+    awesomeCoin.addBlock(data);
     awesomeCoin.printChain();
     for (auto participant: participants_)
       participant->deliver(msg,length);
@@ -95,20 +94,6 @@ private:
         room_.leave(shared_from_this());
       }
     });
-//    socket_.async_read_some(boost::asio::buffer(data_, max_length),
-//        [this, self](boost::system::error_code ec, std::size_t length)
-//        {
-//          if (!ec)
-//          {
-//              room_.deliver(*data_,length);
-//              std::cout<<"Bytes available "<<length<<std::endl;
-//              do_read();
-//          }
-//          else
-//          {
-//            room_.leave(shared_from_this());
-//          }
-//        });
   }
 
   void do_write(std::size_t length)
