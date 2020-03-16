@@ -5,6 +5,25 @@
 #include <iostream>
 
 using boost::asio::ip::tcp;
+using namespace std;
+std::vector<std::string> ports;
+int port;
+
+vector<string> split(const string& str, const string& delim)
+{
+    vector<string> tokens;
+    size_t prev = 0, pos = 0;
+    do
+    {
+        pos = str.find(delim, prev);
+        if (pos == string::npos) pos = str.length();
+        string token = str.substr(prev, pos-prev);
+        if (!token.empty()) tokens.push_back(token);
+        prev = pos + delim.length();
+    }
+    while (pos < str.length() && prev < str.length());
+    return tokens;
+}
 
 class tcp_client
 {
@@ -16,8 +35,13 @@ public:
   tcp_client(boost::asio::io_service& io_service)
   {
         socket = std::make_shared<tcp::socket>(io_service);
-        socket->connect(tcp::endpoint(boost::asio::ip::address::from_string("127.0.0.1"), 1234));
+        socket->connect(tcp::endpoint(boost::asio::ip::address::from_string("127.0.0.1"), 2222));
         std::cout<<"Welcome to chat ! Enter your message ..."<<std::endl;
+  }
+  ~tcp_client(){
+      std::string disconect_str="disconnect:"+std::to_string(port)+"\n";
+      write(disconect_str);
+      socket->close();
   }
 
   void start_receive()
@@ -43,8 +67,10 @@ private:
 
   void handle_receive(const boost::system::error_code& error)
   {
-//        std::cout << "handling receive: " << error << ": " << error.message() << std::endl;
         std::cout << std::string(recv_buf.data()) << std::endl;
+        ports.clear();
+        std::string ports_str=std::string(recv_buf.data());
+        ports=split(ports_str, " ");
         start_receive();
   }
 
@@ -59,12 +85,34 @@ void read_thread()
     io_service.run();
 }
 
+char buff[1024];
+boost::asio::ip::udp::socket *sock;
 void write_thread(){
+        std::string res_msg=std::to_string(port)+"\n";
+        client.write(res_msg);
+        while ( true)
+        {
+            boost::asio::ip::udp::endpoint sender_ep;
+            int bytes = sock->receive_from(boost::asio::buffer(buff), sender_ep);
+            std::string msg(buff, bytes);
+            std::cout<<msg<<std::endl;
+            memset(buff,0,1024);
+        }
+
+}
+
+void peer_write_thread(){
     while(1){
         std::string msg;
-        std::getline( std::cin, msg);
-        std::string res_msg=username+" : "+msg+"\r\n";
-        client.write(res_msg);
+        std::getline(std::cin, msg);
+        if(msg=="exit"){
+            std::exit(EXIT_SUCCESS);
+        }
+        std::string res_msg=msg+"\n";
+        for(string & peer_port : ports){
+            boost::asio::ip::udp::endpoint sender_ep(boost::asio::ip::udp::v4(), stoi(peer_port));
+            sock->send_to(boost::asio::buffer(msg), sender_ep);
+        }
     }
 }
 
@@ -75,10 +123,14 @@ int main(int argc, char* argv[])
       std::cerr << "Usage: client_chat <user_name>\n";
       return 1;
     }
-    username=std::string(argv[1]);
+    port=atoi(argv[1]);
+    sock = new boost::asio::ip::udp::socket(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port));
     boost::thread read(&read_thread);
     boost::thread write(&write_thread);
+    boost::thread peer_write(&peer_write_thread);
     write.join();
     read.join();
+    peer_write.join();
+    delete sock;
     return 0;
 }

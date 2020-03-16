@@ -11,6 +11,24 @@
 #include <deque>
 
 using boost::asio::ip::tcp;
+std::string* str_data;
+std::vector<int> ports;
+using namespace std;
+vector<string> split(const string& str, const string& delim)
+{
+    vector<string> tokens;
+    size_t prev = 0, pos = 0;
+    do
+    {
+        pos = str.find(delim, prev);
+        if (pos == string::npos) pos = str.length();
+        string token = str.substr(prev, pos-prev);
+        if (!token.empty()) tokens.push_back(token);
+        prev = pos + delim.length();
+    }
+    while (pos < str.length() && prev < str.length());
+    return tokens;
+}
 
 class chat_participant
 {
@@ -23,6 +41,9 @@ typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 class chat_room
 {
 public:
+    chat_room(){
+            str_data=new std::string;
+    }
   void join(chat_participant_ptr participant)
   {
     participants_.insert(participant);
@@ -35,16 +56,16 @@ public:
 
   void deliver(std::string msg,std::size_t length)
   {
-    time_t dataTime;
-    TransactionData data(msg, time(&dataTime));
-    awesomeCoin.addBlock(data);
-    awesomeCoin.printChain();
+//    time_t dataTime;
+//    TransactionData data(msg, time(&dataTime));
+//    awesomeCoin.addBlock(data);
+//    awesomeCoin.printChain();
     for (auto participant: participants_)
       participant->deliver(msg,length);
   }
 
 private:
-  Blockchain awesomeCoin;
+//  Blockchain awesomeCoin;
   std::set<chat_participant_ptr> participants_;
 };
 
@@ -57,7 +78,7 @@ public:
     : socket_(std::move(socket)),
       room_(room)
   {
-      str_data=new std::string;
+
   }
 
   void start()
@@ -69,9 +90,12 @@ public:
   void deliver(std::string msg,std::size_t length)
   {
       int i=0;
-      delete str_data;
-      str_data=new std::string;
-      *str_data=msg;
+//      delete str_data;
+//      str_data=new std::string;
+      str_data->clear();
+      for(int & port : ports)
+        *str_data=*str_data+std::to_string(port)+" ";
+      std::cout<<*str_data<<std::endl;
       do_write(str_data->size());
   }
 
@@ -79,14 +103,26 @@ private:
   void do_read()
   {
     auto self(shared_from_this());
-    boost::asio::async_read_until(socket_,in_pac,'\r\n',[this, self](boost::system::error_code ec, std::size_t length)
+    boost::asio::async_read_until(socket_,in_pac,'\n',[this, self](boost::system::error_code ec, std::size_t length)
     {
       if (!ec)
       {
           std::istream is(&in_pac);
           std::string msg;
           std::getline(is, msg);
-          room_.deliver(msg,length);
+          std::size_t disconnect_sustr=msg.find("disconnect:");
+          if(disconnect_sustr!=std::string::npos){
+              int discon_port=stoi(split(msg,":").at(1));
+              for(int i=0;i<ports.size(); i++){
+                  if(ports.at(i)==discon_port){
+                      ports.erase(ports.cbegin()+i);
+                  }
+              }
+          }
+          else{
+              ports.push_back(stoi(msg));
+              room_.deliver(msg,length);
+          }
           do_read();
       }
       else
@@ -99,6 +135,7 @@ private:
   void do_write(std::size_t length)
   {
     auto self(shared_from_this());
+    std::cout<<"write "<<*str_data<<std::endl;
     boost::asio::async_write(socket_, boost::asio::buffer(*str_data),
         [this, self](boost::system::error_code ec, std::size_t length)
         {
@@ -115,7 +152,6 @@ private:
   enum { max_length = 10 };
   char data_[max_length];
   char write_data_[max_length];
-  std::string* str_data;
   chat_room& room_;
   boost::asio::streambuf in_pac;
 };
@@ -154,15 +190,10 @@ int main(int argc, char* argv[])
 {
   try
   {
-    if (argc != 2)
-    {
-      std::cerr << "Usage: server_chat <port>\n";
-      return 1;
-    }
 
     boost::asio::io_service io_service;
 
-    server s(io_service, std::atoi(argv[1]));
+    server s(io_service, std::atoi("2222"));
 
     io_service.run();
   }
